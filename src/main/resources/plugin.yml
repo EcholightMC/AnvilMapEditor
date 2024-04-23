@@ -1,0 +1,6 @@
+name: AnvilMapEditor
+version: '${version}'
+main: com.github.hapily04.anvilmapeditor.AnvilMapEditor
+api-version: '1.20'
+description: 'Allows you to convert an Anvil world to the Polar world format. Additionally, it provides a data point tool for marking important points in the world to be used by another plugin/Minestom implementation.'
+authors: [hapily04]
