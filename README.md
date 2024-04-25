@@ -17,6 +17,10 @@ This option is more difficult as it requires you to do a few steps of your own t
 Once your server is properly setup and configured, you need to start it. Once it's started, you may notice two new folders pop up in the server directory:
 - `anvil_input` - The folder in which you drag and drop your regular worlds to use as inputs.
 - `polar_output` - The folder in which polar worlds will be output to should you decide to use the polar conversion tool.
+Additionally, once you begin editing a world, you may see a few new items in your inventory.
+To save the world, right-click the book.
+To save and convert the world to the Polar world format, right click the commandblock.
+To exit your current edit session, right click the structure void.
 
 ### Commands
 - `/edit <map>` - Begins the editing process for the map provided. The map argument should match a world in the `anvil_input` folder.
