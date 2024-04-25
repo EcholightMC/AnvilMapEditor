@@ -5,4 +5,7 @@ import org.bukkit.World;
 import java.io.File;
 import java.util.UUID;
 
-record EditSession(UUID uuid, World editingWorld, File worldFolder) { }
+record EditSession(UUID uuid, World editingWorld, File worldFolder) {
+
+
+}

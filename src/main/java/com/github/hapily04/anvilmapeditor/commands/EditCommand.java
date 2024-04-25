@@ -36,6 +36,12 @@ public class EditCommand extends Command {
 			PREFIX + "<red>You are already editing the provided map.");
 	private static final Component LOADING_WORLD = MINI_MESSAGE.deserialize(
 			PREFIX + "<grey>Loading world...");
+	private static final Component WORLD_EMPTY = MINI_MESSAGE.deserialize(
+			PREFIX + "<red>A file for the world provided was found, but is empty.");
+	private static final Component ERROR_LOADING_WORLD = MINI_MESSAGE.deserialize(
+			PREFIX + "<red>An error occurred while attempting to load the world.");
+	private static final Component WORLD_LOADED = MINI_MESSAGE.deserialize(
+			PREFIX + "<green>World successfully loaded!");
 	private static final Component WORLD_FOUND = MINI_MESSAGE.deserialize(
 			PREFIX + "<green>World already loaded!");
 	private static final Component EDITING_STARTED = MINI_MESSAGE.deserialize(
@@ -57,13 +63,25 @@ public class EditCommand extends Command {
 			return;
 		}
 		World world = Bukkit.getWorld(map);
+		File worldFolder = new File(INPUT_DIRECTORY, map);
 		if (world == null) {
 			player.sendMessage(LOADING_WORLD);
+			File[] worldFiles = worldFolder.listFiles();
+			if (!worldFolder.isDirectory() || worldFiles == null || worldFiles.length == 0) { // empty folder can't load (normal world would be loaded otherwise)
+				player.sendMessage(WORLD_EMPTY);
+				return;
+			}
 			world = WorldCreator.name(INPUT_DIRECTORY_NAME + '/' + map).createWorld();
+			if (world == null) {
+				player.sendMessage(ERROR_LOADING_WORLD);
+				return;
+			}
+			plugin.getDataManager().loadExternalData(world, worldFolder);
+			player.sendMessage(WORLD_LOADED);
 		} else {
 			player.sendMessage(WORLD_FOUND);
 		}
-		if (plugin.getSessionManager().createEditSession(player, world, new File(INPUT_DIRECTORY, map))) {
+		if (plugin.getSessionManager().createEditSession(player, world, worldFolder)) {
 			player.sendMessage(EDITING_STARTED);
 		} else {
 			player.sendMessage(ALREADY_EDITING);
@@ -72,7 +90,7 @@ public class EditCommand extends Command {
 
 	@Override
 	protected Argument<?>[] arguments() {
-		ArgumentSuggestions<CommandSender> mapSuggestions = ArgumentSuggestions.strings(getMapInputs(true));
+		ArgumentSuggestions<CommandSender> mapSuggestions = ArgumentSuggestions.strings(info -> getMapInputs(true));
 		Argument<String> map = new StringArgument("map").includeSuggestions(mapSuggestions).instance();
 		return new Argument[]{map};
 	}

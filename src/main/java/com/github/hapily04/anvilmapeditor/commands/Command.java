@@ -23,16 +23,16 @@ public abstract class Command extends CommandAPICommand {
 		});
 		runIfNotNull(arguments(), this::withArguments);
 		runIfNotNull(optionalArguments(), this::withOptionalArguments);
-		runIfNotNull(permission(), permission -> withPermission(permission));
-		runIfNotNull(withoutPermission(), permission -> withoutPermission(permission));
-		runIfNotNull(aliases(), aliases -> withAliases(aliases));
-		runIfNotNull(fullDescription(), fullDescription -> withFullDescription(fullDescription));
-		runIfNotNull(shortDescription(), shortDescription -> withShortDescription(shortDescription));
+		runIfNotNull(permission(), this::withPermission);
+		runIfNotNull(withoutPermission(), this::withoutPermission);
+		runIfNotNull(aliases(), this::withAliases);
+		runIfNotNull(fullDescription(), this::withFullDescription);
+		runIfNotNull(shortDescription(), this::withShortDescription);
 		//withHelp(shortDescription(), fullDescription()); can't support
-		runIfNotNull(requirement(), requirement -> withRequirement(requirement));
+		runIfNotNull(requirement(), this::withRequirement);
 		runIfNotNull(subcommands(), this::withSubcommands);
-		runIfNotNull(usage(), usage -> withUsage(usage));
-		override();
+		runIfNotNull(usage(), this::withUsage);
+		//override();
 	}
 
 	protected abstract void executes(CommandSender sender, CommandArguments args);
@@ -79,7 +79,7 @@ public abstract class Command extends CommandAPICommand {
 
 	@Override
 	public final void register() { // make sure no subclasses override
-		CommandAPI.unregister(getName());
+		CommandAPI.unregister(getName(), true);
 		super.register();
 	}
 
@@ -91,7 +91,7 @@ public abstract class Command extends CommandAPICommand {
 			for (Class<Command> command : commandClasses) {
 				CommandName commandNameAnnotation = command.getAnnotation(CommandName.class);
 				if (commandNameAnnotation == null) {
-					logger.severe("No CommandName annotation found for '" + command.getName() + "'.");
+					//logger.severe("No CommandName annotation found for '" + command.getName() + "'."); // do nothing because subcommands might exist
 					continue;
 				}
 				Command cmd = command.getConstructor(String.class).newInstance(commandNameAnnotation.value());
