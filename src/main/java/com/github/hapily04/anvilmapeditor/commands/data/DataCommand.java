@@ -49,4 +49,9 @@ public class DataCommand extends Command {
 		return commandSender -> commandSender instanceof Player player && player.getWorld() != spawnWorld;
 	}
 
+	@Override
+	public String permission() {
+		return "anvilmapeditor.data";
+	}
+
 }
