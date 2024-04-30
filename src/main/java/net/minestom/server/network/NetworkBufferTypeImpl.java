@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 
 import static net.minestom.server.network.NetworkBuffer.*;
 
-interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
+interface NetworkBufferTypeImpl<T> extends Type<T> {
 	int SEGMENT_BITS = 0x7F;
 	int CONTINUE_BIT = 0x80;
 
@@ -424,7 +424,7 @@ interface NetworkBufferTypeImpl<T> extends NetworkBuffer.Type<T> {
 		};
 	}
 
-	static <T> NetworkBufferTypeImpl<T> fromOptional(NetworkBuffer.Type<T> optionalType) {
+	static <T> NetworkBufferTypeImpl<T> fromOptional(Type<T> optionalType) {
 		return new NetworkBufferTypeImpl<>() {
 			@Override
 			public void write(@NotNull NetworkBuffer buffer, T value) {

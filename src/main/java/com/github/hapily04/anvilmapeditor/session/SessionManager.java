@@ -5,9 +5,9 @@ import com.github.hapily04.anvilmapeditor.commands.data.DataManager;
 import com.github.hapily04.anvilmapeditor.util.FileUtils;
 import com.github.hapily04.anvilmapeditor.util.ItemBuilder;
 import com.google.common.io.Files;
-import net.hollowcube.polar.AnvilPolar;
-import net.hollowcube.polar.PolarWorld;
-import net.hollowcube.polar.PolarWriter;
+import me.nullicorn.nedit.type.NBTCompound;
+import me.nullicorn.nedit.type.NBTList;
+import net.hollowcube.polar.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.*;
@@ -31,11 +31,13 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 import static com.github.hapily04.anvilmapeditor.AnvilMapEditor.PREFIX;
+import static com.github.hapily04.anvilmapeditor.commands.data.DataManager.NBT_DATA_KEY;
 
 public class SessionManager implements Listener {
 
@@ -128,6 +130,7 @@ public class SessionManager implements Listener {
 		return null;
 	}
 
+	@SuppressWarnings("UnstableApiUsage")
 	private void convertToPolar(EditSession editSession) {
 		Player player = Bukkit.getPlayer(editSession.uuid());
 		saveWorldData(editSession.editingWorld(), player, false);
@@ -137,12 +140,29 @@ public class SessionManager implements Listener {
 			File worldFolder = editSession.worldFolder();
 			String worldName = worldFolder.getName();
 			String polarFileName = worldName + ".polar";
+			World world = editSession.editingWorld();
 			try {
 				PolarWorld polarWorld = AnvilPolar.anvilToPolar(worldFolder.toPath());
+				NBTCompound baseCompound = dataManager.getData(world);
+				NBTList dataList = baseCompound.getList(NBT_DATA_KEY);
+				if (dataList != null) {
+					for (Object o : dataList) {
+						NBTCompound compound = (NBTCompound) o;
+						if (compound.containsKey("Biome")) {
+							String biomeNamespaceID = compound.getCompound("Biome").getString("Name");
+							for (PolarChunk polarChunk : polarWorld.chunks()) {
+								for (PolarSection section : polarChunk.sections()) {
+									String[] biomes = section.biomePalette();
+									Arrays.fill(biomes, biomeNamespaceID);
+								}
+							}
+						}
+					}
+				}
 				File outputFolder = FileUtils.defendFile(new File(outputDirectory, worldName), true);
 				File outputFile = FileUtils.defendFile(new File(outputFolder, polarFileName));
 				File outputDataFile = FileUtils.defendFile(new File(outputFolder, DataManager.DATA_FILE_NAME));
-				Files.copy(dataManager.getDataFile(editSession.editingWorld()), outputDataFile);
+				Files.copy(dataManager.getDataFile(world), outputDataFile);
 				try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile)) {
 					fileOutputStream.write(PolarWriter.write(polarWorld));
 				}
