@@ -1,11 +1,14 @@
 package com.github.hapily04.anvilmapeditor.listeners;
 
 import com.github.hapily04.anvilmapeditor.AnvilMapEditor;
+import com.github.hapily04.anvilmapeditor.commands.data.DataManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -42,7 +45,10 @@ public class SpawnListener implements Listener {
 
 	@EventHandler
 	private void onDamage(EntityDamageEvent event) {
+		Entity entity = event.getEntity();
 		event.setCancelled(true);
+		if (!(entity.getType() == EntityType.PLAYER) && event.getCause() == EntityDamageEvent.DamageCause.KILL
+					&& !entity.hasMetadata(DataManager.METADATA_KEY)) event.setCancelled(false);
 	}
 
 	@EventHandler

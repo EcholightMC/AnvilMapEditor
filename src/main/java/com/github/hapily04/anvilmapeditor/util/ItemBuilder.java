@@ -131,6 +131,7 @@ public class ItemBuilder {
 	 * @param slot the optional slot in which this attribute will be enabled in
 	 * @return the {@link ItemBuilder} being modified
 	 */
+	@SuppressWarnings("removal")
 	public ItemBuilder modifyAttribute(@NotNull Attribute attribute, @NotNull String name, @NotNull AttributeModifier.Operation operation,
 									   double amount, @Nullable EquipmentSlot slot) {
 		Objects.requireNonNull(attribute);

@@ -2,15 +2,18 @@ package com.github.hapily04.anvilmapeditor.session;
 
 import com.github.hapily04.anvilmapeditor.AnvilMapEditor;
 import com.github.hapily04.anvilmapeditor.commands.data.DataManager;
-import com.github.hapily04.anvilmapeditor.util.FileUtils;
 import com.github.hapily04.anvilmapeditor.util.ItemBuilder;
-import com.google.common.io.Files;
-import me.nullicorn.nedit.type.NBTCompound;
-import me.nullicorn.nedit.type.NBTList;
-import net.hollowcube.polar.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.*;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.GameMode;
+import org.bukkit.GameRule;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -25,31 +28,20 @@ import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitScheduler;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 import static com.github.hapily04.anvilmapeditor.AnvilMapEditor.PREFIX;
-import static com.github.hapily04.anvilmapeditor.commands.data.DataManager.NBT_DATA_KEY;
 
 public class SessionManager implements Listener {
-
-	private static final String OUTPUT_DIRECTORY_NAME = "polar_output";
 
 	private static final ItemBuilder.Item EXIT_ITEM = new ItemBuilder(Material.STRUCTURE_VOID)
 														 .named("<red>Exit")
 														 .withLore("<grey>Saves the world, unloads the world, and teleports you back to the lobby.")
-														 .build();
-	private static final ItemBuilder.Item CONVERT_ITEM = new ItemBuilder(Material.COMMAND_BLOCK)
-														 .named("<gradient:yellow:aqua>Convert to Polar")
-														 .withLore("<grey>Saves the world & outputs a polar world in the output folder.")
 														 .build();
 	private static final ItemBuilder.Item SAVE_ITEM = new ItemBuilder(Material.BOOK)
 														 .named("<gradient:green:aqua>Save Anvil World Data")
@@ -58,26 +50,22 @@ public class SessionManager implements Listener {
 
 	private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
 
+	private static final Component CACHING_UNLOAD_CHUNKS = MINI_MESSAGE.deserialize(PREFIX + "<grey>Caching extra chunks to be unloaded (unloaded when you run /convertpolar)");
 	private static final Component SAVING_WORLD = MINI_MESSAGE.deserialize(PREFIX + "<grey>Saving the anvil world...");
 	private static final Component WORLD_SAVED = MINI_MESSAGE.deserialize(PREFIX + "<green>Anvil world saved!");
-	private static final Component CONVERTING = MINI_MESSAGE.deserialize(PREFIX + "<grey>Beginning conversion process...");
-	private static final Component CONVERTED = MINI_MESSAGE.deserialize(PREFIX + "<green>Successfully converted to Polar!");
 	private static final Component EXITED_SESSION = MINI_MESSAGE.deserialize(PREFIX + "<grey>Exited edit session.");
 
-	private static final Set<ItemBuilder.Item> UNTOUCHED_ITEMS = Set.of(EXIT_ITEM, CONVERT_ITEM, SAVE_ITEM);
+	private static final Set<ItemBuilder.Item> UNTOUCHED_ITEMS = Set.of(EXIT_ITEM, SAVE_ITEM);
 
 	private final Set<EditSession> editSessions = new HashSet<>();
 
 	private final AnvilMapEditor plugin;
 	private final DataManager dataManager;
 
-	private final File outputDirectory;
 
 	public SessionManager(AnvilMapEditor plugin, DataManager dataManager) {
 		this.plugin = plugin;
 		this.dataManager = dataManager;
-		File worldContainer = plugin.getServer().getWorldContainer();
-		outputDirectory = FileUtils.defendFile(new File(worldContainer, OUTPUT_DIRECTORY_NAME), true);
 	}
 
 	/**
@@ -113,8 +101,9 @@ public class SessionManager implements Listener {
 		playTeleportEffects(player);
 		player.sendMessage(SAVING_WORLD);
 		if (currentEditSession.editingWorld().getPlayers().isEmpty()) {
-			dataManager.saveExternalData(currentEditSession.editingWorld(), true);
-			Bukkit.unloadWorld(currentEditSession.editingWorld(), true);
+			World world = currentEditSession.editingWorld();
+			saveWorldData(world, player);
+			Bukkit.unloadWorld(world, true);
 		}
 		player.sendMessage(WORLD_SAVED);
 		editSessions.remove(currentEditSession);
@@ -130,58 +119,50 @@ public class SessionManager implements Listener {
 		return null;
 	}
 
-	@SuppressWarnings("UnstableApiUsage")
-	private void convertToPolar(EditSession editSession) {
-		Player player = Bukkit.getPlayer(editSession.uuid());
-		saveWorldData(editSession.editingWorld(), player, false);
-		BukkitScheduler scheduler = Bukkit.getScheduler();
-		scheduler.runTaskAsynchronously(plugin, () -> { // safe because it only schedules once saveWorldData is done
-			safeMessage(player, CONVERTING);
-			File worldFolder = editSession.worldFolder();
-			String worldName = worldFolder.getName();
-			String polarFileName = worldName + ".polar";
-			World world = editSession.editingWorld();
-			try {
-				PolarWorld polarWorld = AnvilPolar.anvilToPolar(worldFolder.toPath());
-				NBTCompound baseCompound = dataManager.getData(world);
-				NBTList dataList = baseCompound.getList(NBT_DATA_KEY);
-				if (dataList != null) {
-					for (Object o : dataList) {
-						NBTCompound compound = (NBTCompound) o;
-						if (compound.containsKey("Biome")) {
-							String biomeNamespaceID = compound.getCompound("Biome").getString("Name");
-							for (PolarChunk polarChunk : polarWorld.chunks()) {
-								for (PolarSection section : polarChunk.sections()) {
-									String[] biomes = section.biomePalette();
-									Arrays.fill(biomes, biomeNamespaceID);
-								}
-							}
-						}
-					}
-				}
-				File outputFolder = FileUtils.defendFile(new File(outputDirectory, worldName), true);
-				File outputFile = FileUtils.defendFile(new File(outputFolder, polarFileName));
-				File outputDataFile = FileUtils.defendFile(new File(outputFolder, DataManager.DATA_FILE_NAME));
-				Files.copy(dataManager.getDataFile(world), outputDataFile);
-				try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile)) {
-					fileOutputStream.write(PolarWriter.write(polarWorld));
-				}
-			} catch (IOException e) {
-				safeMessage(player, MINI_MESSAGE.deserialize(
-						PREFIX + "<red>An error occurred while trying to convert " + polarFileName));
-				throw new RuntimeException(e);
-			}
-			safeMessage(player, CONVERTED);
-		});
-	}
-
-	private void saveWorldData(World world, @Nullable Player player, boolean async) {
+	private void saveWorldData(World world, Player player) {
 		safeMessage(player, SAVING_WORLD);
 		dataManager.clearEntities(world); // so they aren't saved in the world
 		world.save();
+		/*safeMessage(player, CACHING_UNLOAD_CHUNKS);
+		Set<Chunk> chunksToUnload = new HashSet<>();
+		for (Chunk chunk : world.getLoadedChunks()) {
+			int bx = chunk.getX()<<4;
+			int bz = chunk.getZ()<<4;
+			boolean unload = true;
+			blockMath: for(int x = bx; x < bx+16; x++) {
+				for (int z = bz; z < bz + 16; z++) {
+					for (int y = -64; y < 320; y++) {
+						if (!world.getBlockAt(x, y, z).isEmpty()) {
+							unload = false;
+							break blockMath;
+						}
+					}
+				}
+			}
+			if (unload) chunksToUnload.add(chunk);
+		}
+		Set<Chunk> chunksToUnloadCopy = Set.copyOf(chunksToUnload);
+		for (Chunk chunk : chunksToUnloadCopy) {
+			int chunkX = chunk.getX();
+			int chunkZ = chunk.getZ();
+			Chunk chunkNorth = world.getChunkAt(chunkX, chunkZ+1, false);
+			Chunk chunkSouth = world.getChunkAt(chunkX, chunkZ-1, false);
+			Chunk chunkEast = world.getChunkAt(chunkX-1, chunkZ, false);
+			Chunk chunkWest = world.getChunkAt(chunkX+1, chunkZ+1, false);
+			if (containsValidChunk(chunksToUnloadCopy, chunkNorth, chunkSouth, chunkEast, chunkWest)) chunksToUnload.remove(chunk);
+		}
+		Set<ChunkPos> chunkPosToUnload = chunksToUnload.stream().map(chunk -> new ChunkPos(chunk.getX(), chunk.getZ())).collect(Collectors.toSet());
+		UnloadCache.setChunks(world.getName().replace(EditCommand.INPUT_DIRECTORY_NAME + "/", ""), chunkPosToUnload);*/
 		dataManager.loadEntities(world);
-		dataManager.saveExternalData(world, false, async);
+		dataManager.saveExternalData(world, false, true); // async always true because this method shouldn't be called on server stop
 		safeMessage(player, WORLD_SAVED);
+	}
+
+	private boolean containsValidChunk(Set<Chunk> unloadChunks, Chunk... chunks) {
+		for (Chunk chunk : chunks) {
+			if (!unloadChunks.contains(chunk) && chunk.isLoaded()) return true;
+		}
+		return false;
 	}
 
 	public static void applyGameRules(World world) {
@@ -209,8 +190,7 @@ public class SessionManager implements Listener {
 
 	private void setItems(Player player) {
 		Inventory inventory = player.getInventory();
-		inventory.setItem(6, SAVE_ITEM.getItem());
-		inventory.setItem(7, CONVERT_ITEM.getItem());
+		inventory.setItem(7, SAVE_ITEM.getItem());
 		inventory.setItem(8, EXIT_ITEM.getItem());
 	}
 
@@ -259,15 +239,6 @@ public class SessionManager implements Listener {
 		if (item.isSimilar(EXIT_ITEM.getOriginalItem())) {
 			event.setCancelled(true);
 			exitSession(player);
-		}
-		else if (item.isSimilar(CONVERT_ITEM.getOriginalItem())) {
-			event.setCancelled(true);
-			Material convertItemMaterial = CONVERT_ITEM.getOriginalItem().getType();
-			if (player.hasCooldown(convertItemMaterial)) return;
-			EditSession editSession = getEditSession(player.getUniqueId());
-			if (editSession == null) return;
-			player.setCooldown(convertItemMaterial, 100);
-			convertToPolar(editSession);
 		} else if (item.isSimilar(SAVE_ITEM.getOriginalItem())) {
 			event.setCancelled(true);
 			Material saveItemMaterial = SAVE_ITEM.getOriginalItem().getType();
@@ -275,7 +246,7 @@ public class SessionManager implements Listener {
 			EditSession editSession = getEditSession(player.getUniqueId());
 			if (editSession == null) return;
 			player.setCooldown(saveItemMaterial, 100);
-			saveWorldData(editSession.editingWorld(), player, true);
+			saveWorldData(editSession.editingWorld(), player);
 		}
 	}
 

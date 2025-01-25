@@ -2,7 +2,12 @@ package com.github.hapily04.anvilmapeditor.commands.data;
 
 import com.github.hapily04.anvilmapeditor.AnvilMapEditor;
 import com.github.hapily04.anvilmapeditor.commands.Command;
-import dev.jorel.commandapi.arguments.*;
+import dev.jorel.commandapi.arguments.Argument;
+import dev.jorel.commandapi.arguments.BlockStateArgument;
+import dev.jorel.commandapi.arguments.FloatArgument;
+import dev.jorel.commandapi.arguments.LocationArgument;
+import dev.jorel.commandapi.arguments.NBTCompoundArgument;
+import dev.jorel.commandapi.arguments.StringArgument;
 import dev.jorel.commandapi.executors.CommandArguments;
 import me.nullicorn.nedit.type.NBTCompound;
 import net.kyori.adventure.text.Component;

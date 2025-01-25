@@ -25,12 +25,12 @@ import static com.github.hapily04.anvilmapeditor.AnvilMapEditor.PREFIX;
 public class EditCommand extends Command {
 
 	private static final File WORLD_CONTAINER = AnvilMapEditor.getInstance().getServer().getWorldContainer();
-	private static final String INPUT_DIRECTORY_NAME = "anvil_input";
-	private static final File INPUT_DIRECTORY = FileUtils.defendFile(new File(WORLD_CONTAINER, INPUT_DIRECTORY_NAME), true);
+	public static final String INPUT_DIRECTORY_NAME = "anvil_input";
+	public static final File INPUT_DIRECTORY = FileUtils.defendFile(new File(WORLD_CONTAINER, INPUT_DIRECTORY_NAME), true);
 
 	private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
 
-	private static final Component INVALID_MAP = MINI_MESSAGE.deserialize(
+	public static final Component INVALID_MAP = MINI_MESSAGE.deserialize(
 			PREFIX + "<red>You need to provide a valid map to begin.");
 	private static final Component ALREADY_EDITING = MINI_MESSAGE.deserialize(
 			PREFIX + "<red>You are already editing the provided map.");
@@ -62,7 +62,8 @@ public class EditCommand extends Command {
 			player.sendMessage(INVALID_MAP);
 			return;
 		}
-		World world = Bukkit.getWorld(map);
+		String fullMap = INPUT_DIRECTORY_NAME + '/' + map;
+		World world = Bukkit.getWorld(fullMap);
 		File worldFolder = new File(INPUT_DIRECTORY, map);
 		if (world == null) {
 			player.sendMessage(LOADING_WORLD);
@@ -71,7 +72,7 @@ public class EditCommand extends Command {
 				player.sendMessage(WORLD_EMPTY);
 				return;
 			}
-			world = WorldCreator.name(INPUT_DIRECTORY_NAME + '/' + map).createWorld();
+			world = WorldCreator.name(fullMap).createWorld();
 			if (world == null) {
 				player.sendMessage(ERROR_LOADING_WORLD);
 				return;
@@ -105,7 +106,7 @@ public class EditCommand extends Command {
 		return "anvilmapeditor.edit";
 	}
 
-	private @Nullable String getMap(CommandArguments args) {
+	public static @Nullable String getMap(CommandArguments args) {
 		String map = (String) args.get("map");
 		if (map == null) return null;
 		for (String mapInput : getMapInputs(false)) {
@@ -114,7 +115,7 @@ public class EditCommand extends Command {
 		return null;
 	}
 
-	private String[] getMapInputs(boolean suggestions) {
+	public static String[] getMapInputs(boolean suggestions) {
 		File[] files = INPUT_DIRECTORY.listFiles();
 		if (files == null) return new String[]{};
 		String[] mapNames = new String[files.length];

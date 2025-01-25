@@ -2,7 +2,7 @@ plugins {
     id "com.github.johnrengelman.shadow" version "8.1.1"
     id 'java'
     id 'org.jetbrains.kotlin.jvm' version '2.0.0-RC1'
-    id "io.papermc.paperweight.userdev" version "2.0.0-beta.8"
+    id "io.papermc.paperweight.userdev" version "2.0.0-beta.14"
 }
 
 group = 'com.github.hapily04'
@@ -24,8 +24,7 @@ dependencies {
     implementation 'dev.jorel:commandapi-bukkit-shade:9.7.0'
     implementation 'dev.hollowcube:polar:1.12.1'
     implementation 'me.nullicorn:Nedit:2.2.0'
-    implementation 'io.github.jglrxavpok.hephaistos:common:2.6.1'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.0.0-RC1' // required for hephaistos
+    implementation "net.minestom:minestom-snapshots:d760a60a5c" // same minestom that polar targets
 }
 
 def targetJavaVersion = 21

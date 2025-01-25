@@ -34,7 +34,7 @@ import java.util.function.Function;
 public class DataManager implements Listener {
 
 	public static final String DATA_FILE_NAME = "data.dat";
-	private static final String METADATA_KEY = "NBT-Key";
+	public static final String METADATA_KEY = "NBT-Key";
 	public static final String NBT_ENTITIES_KEY = "PhysicalEntities";
 	public static final String NBT_DATA_KEY = "Data";
 	private static final Vector3f ZEROED_VECTOR = new Vector3f(0, 0, 0);

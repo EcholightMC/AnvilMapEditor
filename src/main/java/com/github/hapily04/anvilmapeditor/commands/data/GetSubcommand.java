@@ -11,8 +11,10 @@ import me.nullicorn.nedit.type.NBTList;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.nbt.TextComponentTagVisitor;
+import net.minecraft.server.MinecraftServer;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -65,11 +67,13 @@ class GetSubcommand extends Command {
 	@SuppressWarnings("CallToPrintStackTrace")
 	private void sendPrettyCompound(Player player, NBTCompound compound) {
 		try {
-			TextComponentTagVisitor textComponentTagVisitor = new TextComponentTagVisitor("", 0);
+			TextComponentTagVisitor textComponentTagVisitor = new TextComponentTagVisitor("");
 			net.minecraft.network.chat.Component component = textComponentTagVisitor.visit(
 					TagParser.parseTag(compound.toString()));
+			HolderLookup.Provider provider = HolderLookup.Provider.create(
+					MinecraftServer.getDefaultRegistryAccess().listRegistries());
 			Component prettyData = GsonComponentSerializer.gson().deserialize(
-					net.minecraft.network.chat.Component.Serializer.toJson(component));
+					net.minecraft.network.chat.Component.Serializer.toJson(component, provider));
 			player.sendMessage(prettyData);
 		} catch (CommandSyntaxException e) {
 			player.sendMessage(ERORR_PRINTING);

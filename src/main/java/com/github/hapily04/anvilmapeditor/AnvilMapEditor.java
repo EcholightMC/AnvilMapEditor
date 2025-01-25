@@ -11,6 +11,7 @@ import me.nullicorn.nedit.SNBTReader;
 import me.nullicorn.nedit.type.NBTCompound;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.SnbtPrinterTagVisitor;
+import net.minestom.server.MinecraftServer;
 import org.bukkit.World;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -30,6 +31,7 @@ public final class AnvilMapEditor extends JavaPlugin {
 
     @Override
     public void onLoad() {
+        MinecraftServer.init(); // required for polar conversion to work
         CommandAPIBukkitConfig config = new CommandAPIBukkitConfig(this).initializeNBTAPI(NBTCompound.class, o -> {
             CompoundTag compoundTag = (CompoundTag) o;
 			try {
