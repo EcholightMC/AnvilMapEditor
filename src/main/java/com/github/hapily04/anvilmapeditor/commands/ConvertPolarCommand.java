@@ -28,8 +28,10 @@ import org.bukkit.scheduler.BukkitScheduler;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Predicate;
 
 import static com.github.hapily04.anvilmapeditor.AnvilMapEditor.PREFIX;
@@ -101,7 +103,7 @@ public class ConvertPolarCommand extends Command {
 				NBTCompound dataCompound = NBTReader.readFile(dataFile);
 				NBTList dataList = dataCompound.getList(NBT_DATA_KEY);
 				Collection<PolarChunk> chunks = polarWorld.chunks();
-				cleanPolarChunks(chunks);
+				cleanPolarChunks(chunks, 1);
 				if (dataList != null) {
 					for (Object o : dataList) {
 						NBTCompound compound = (NBTCompound) o;
@@ -133,25 +135,45 @@ public class ConvertPolarCommand extends Command {
 	}
 
 	/**
-	 * Removes chunks that are only made up of air from the collection, saving on storage and memory (when loaded on Minestom)
+	 * Saves only chunks that are populated with at least 1 block + a radius of `bufferChunks` blank chunks around.
 	 *
 	 * @param chunks the chunks to query
+	 * @param bufferChunks the radius value for how many chunks should be loaded around the occupied chunks.
+	 *                        <b>A minimum value of 1 is recommended to prevent visual artifacts</b>
 	 */
-	private void cleanPolarChunks(Collection<PolarChunk> chunks) {
-		PolarChunk[] chunksCopy = chunks.toArray(chunks.toArray(new PolarChunk[0]));
-		for (PolarChunk chunk : chunksCopy) {
-			boolean remove = true;
-			sectionChecker: for (PolarSection section : chunk.sections()) {
-				for (String block : section.blockPalette()) {
-					if (!block.equals("air")) {
-						remove = false;
-						break sectionChecker;
-					}
+	public static void cleanPolarChunks(Collection<PolarChunk> chunks, int bufferChunks) {
+		List<PolarChunk> validChunks = new ArrayList<>(); // chunks that aren't blank
+		List<PolarChunk> blankChunks = new ArrayList<>();
+		for (PolarChunk polarChunk : chunks) {
+			boolean isBlank = true;
+			for (PolarSection section : polarChunk.sections()) {
+				String[] blockPalette = section.blockPalette();
+				if (blockPalette.length != 1 || !blockPalette[0].equals("air")) {
+					isBlank = false;
+					validChunks.add(polarChunk);
+					break;
 				}
 			}
-			if (remove) chunks.remove(chunk);
+			if (isBlank) blankChunks.add(polarChunk);//instanceContainer.loadChunk(polarChunk.x(), polarChunk.z());
 		}
- 	}
+		for (PolarChunk blankChunk : blankChunks) {
+			if (hasValidNeighboringChunk(blankChunk, blankChunks, bufferChunks)) validChunks.add(blankChunk); // needs to be loaded to fix culling
+		}
+		chunks.removeIf(chunk -> !validChunks.contains(chunk)); // remove all chunks that aren't valid & aren't part of buffer
+	}
+
+	private static boolean hasValidNeighboringChunk(PolarChunk chunk, List<PolarChunk> blankChunks, int bufferChunks) {
+		int chunkX = chunk.x();
+		int chunkZ = chunk.z();
+		if (!isBlankChunkAt(chunkX, chunkZ+bufferChunks, blankChunks)) return true; // north
+		if (!isBlankChunkAt(chunkX, chunkZ-bufferChunks, blankChunks)) return true; // south
+		if (!isBlankChunkAt(chunkX-bufferChunks, chunkZ, blankChunks)) return true; // east
+		return !isBlankChunkAt(chunkX+bufferChunks, chunkZ, blankChunks); // west
+	}
+
+	private static boolean isBlankChunkAt(int x, int z, List<PolarChunk> blankChunks) {
+		return blankChunks.stream().anyMatch(chunk -> chunk.x() == x && chunk.z() == z);
+	}
 
 	private void safeMessage(Player player, Component message) {
 		if (player == null) return;
