@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.function.Predicate;
 
 import static com.github.hapily04.anvilmapeditor.AnvilMapEditor.PREFIX;
@@ -99,14 +100,15 @@ public class ConvertPolarCommand extends Command {
 				File dataFile = new File(worldFolder, DataManager.DATA_FILE_NAME);
 				NBTCompound dataCompound = NBTReader.readFile(dataFile);
 				NBTList dataList = dataCompound.getList(NBT_DATA_KEY);
+				Collection<PolarChunk> chunks = polarWorld.chunks();
+				cleanPolarChunks(chunks);
 				if (dataList != null) {
 					for (Object o : dataList) {
 						NBTCompound compound = (NBTCompound) o;
 						if (compound.containsKey("Biome")) {
 							String biomeNamespaceID = compound.getCompound("Biome").getString("Name");
-							for (PolarChunk polarChunk : polarWorld.chunks()) {
+							for (PolarChunk polarChunk : chunks) {
 								for (PolarSection section : polarChunk.sections()) {
-									System.out.println(Arrays.toString(section.blockPalette()));
 									String[] biomes = section.biomePalette();
 									Arrays.fill(biomes, biomeNamespaceID);
 								}
@@ -129,6 +131,27 @@ public class ConvertPolarCommand extends Command {
 			}
 		});
 	}
+
+	/**
+	 * Removes chunks that are only made up of air from the collection, saving on storage and memory (when loaded on Minestom)
+	 *
+	 * @param chunks the chunks to query
+	 */
+	private void cleanPolarChunks(Collection<PolarChunk> chunks) {
+		PolarChunk[] chunksCopy = chunks.toArray(chunks.toArray(new PolarChunk[0]));
+		for (PolarChunk chunk : chunksCopy) {
+			boolean remove = true;
+			sectionChecker: for (PolarSection section : chunk.sections()) {
+				for (String block : section.blockPalette()) {
+					if (!block.equals("air")) {
+						remove = false;
+						break sectionChecker;
+					}
+				}
+			}
+			if (remove) chunks.remove(chunk);
+		}
+ 	}
 
 	private void safeMessage(Player player, Component message) {
 		if (player == null) return;
