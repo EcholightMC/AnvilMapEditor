@@ -13,6 +13,7 @@ import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.PluginManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -57,7 +58,7 @@ public class EditCommand extends Command {
 	@Override
 	protected void executes(CommandSender sender, CommandArguments args) {
 		Player player = (Player) sender;
-		String map = getMap(args);
+		String map = getMap((String) args.get("map"));
 		if (map == null) {
 			player.sendMessage(INVALID_MAP);
 			return;
@@ -106,8 +107,7 @@ public class EditCommand extends Command {
 		return "anvilmapeditor.edit";
 	}
 
-	public static @Nullable String getMap(CommandArguments args) {
-		String map = (String) args.get("map");
+	public static @Nullable String getMap(String map) {
 		if (map == null) return null;
 		for (String mapInput : getMapInputs(false)) {
 			if (mapInput.equalsIgnoreCase(map)) return mapInput;
@@ -116,6 +116,7 @@ public class EditCommand extends Command {
 	}
 
 	public static String[] getMapInputs(boolean suggestions) {
+        PluginManager pm = Bukkit.getPluginManager();
 		File[] files = INPUT_DIRECTORY.listFiles();
 		if (files == null) return new String[]{};
 		String[] mapNames = new String[files.length];

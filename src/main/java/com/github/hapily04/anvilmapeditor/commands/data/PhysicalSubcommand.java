@@ -14,6 +14,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -39,7 +40,7 @@ class PhysicalSubcommand extends Command {
 		DataManager dataManager = plugin.getDataManager();
 		Player player = (Player) sender; // defined in DataCommand.class
 		Location loc = (Location) args.get("location");
-		BlockData blockData = (BlockData) args.get("block");
+		BlockState blockState = (BlockState) args.get("block");
 		Float size = (Float) args.get("size");
 		String key = (String) args.get("key");
 		NBTCompound data = (NBTCompound) args.get("nbtdata");
@@ -54,8 +55,8 @@ class PhysicalSubcommand extends Command {
 		entityCompound.put("x", (float) loc.getX());
 		entityCompound.put("y", (float) loc.getY());
 		entityCompound.put("z", (float) loc.getZ());
-		assert blockData != null;
-		entityCompound.put("Material", blockData.getMaterial().toString());
+		assert blockState != null;
+		entityCompound.put("Material", blockState.getBlockData().getMaterial().toString());
 		assert size != null;
 		entityCompound.put("Size", size);
 		entityCompound.put("Key", key);
@@ -69,7 +70,7 @@ class PhysicalSubcommand extends Command {
 	@Override
 	protected Argument<?>[] arguments() {
 		Argument<Location> locationArgument = new LocationArgument("location");
-		Argument<BlockData> blockArgument = new BlockStateArgument("block");
+		Argument<BlockState> blockArgument = new BlockStateArgument("block");
 		Argument<Float> sizeArgument = new FloatArgument("size", 0.1f);
 		Argument<String> keyArgument = new StringArgument("key");
 		NBTCompoundArgument<NBTCompound> nbtCompoundArgument = new NBTCompoundArgument<>("nbtdata");

@@ -12,8 +12,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.nbt.TextComponentTagVisitor;
+import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.server.MinecraftServer;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
@@ -42,14 +44,14 @@ class GetSubcommand extends Command {
 		Player player = (Player) sender; // defined in DataCommand.class
 		World world = player.getWorld();
 		String key = (String) args.get("key");
-		NBTList dataList = dataManager.getOrCreateDataList(world, NBT_DATA_KEY);
+		NBTCompound dataCompound = dataManager.getOrCreateDataCompound(world, NBT_DATA_KEY);
 		NBTCompound compound = null;
 		if (key == null) {
 			compound = new NBTCompound();
-			compound.put(NBT_DATA_KEY, dataList);
+			compound.put(NBT_DATA_KEY, dataCompound);
 			sendPrettyCompound(player, compound);
 		} else {
-			for (Object o : dataList) {
+			for (Object o : dataCompound.values()) {
 				NBTCompound nbtCompound = (NBTCompound) o;
 				if (nbtCompound.containsKey(key)) {
 					compound = nbtCompound;
@@ -66,19 +68,17 @@ class GetSubcommand extends Command {
 
 	@SuppressWarnings("CallToPrintStackTrace")
 	private void sendPrettyCompound(Player player, NBTCompound compound) {
-		try {
-			TextComponentTagVisitor textComponentTagVisitor = new TextComponentTagVisitor("");
-			net.minecraft.network.chat.Component component = textComponentTagVisitor.visit(
-					TagParser.parseTag(compound.toString()));
+		/*try {
 			HolderLookup.Provider provider = HolderLookup.Provider.create(
-					MinecraftServer.getDefaultRegistryAccess().listRegistries());
-			Component prettyData = GsonComponentSerializer.gson().deserialize(
-					net.minecraft.network.chat.Component.Serializer.toJson(component, provider));
-			player.sendMessage(prettyData);
+				MinecraftServer.getServer().registryAccess().listRegistries());
+			net.minecraft.network.chat.Component component = NbtUtils.toPrettyComponent(TagParser.parseCompoundFully(compound.toString()));
+			Component prettyData = GsonComponentSerializer.gson().deserialize(component.getString());
+			player.sendMessage(compound.toString());
 		} catch (CommandSyntaxException e) {
 			player.sendMessage(ERORR_PRINTING);
 			e.printStackTrace();
-		}
+		}*/
+		player.sendMessage(compound.toString());
 	}
 
 	@Override

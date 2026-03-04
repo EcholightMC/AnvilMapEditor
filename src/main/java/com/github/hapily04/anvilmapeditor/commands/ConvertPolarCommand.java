@@ -1,25 +1,26 @@
 package com.github.hapily04.anvilmapeditor.commands;
 
+import ca.spottedleaf.moonrise.common.util.CoordinateUtils;
 import com.github.hapily04.anvilmapeditor.AnvilMapEditor;
 import com.github.hapily04.anvilmapeditor.commands.data.DataManager;
 import com.github.hapily04.anvilmapeditor.util.FileUtils;
+import com.github.hapily04.anvilmapeditor.util.MiniRegionFile;
 import com.google.common.io.Files;
 import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.ArgumentSuggestions;
 import dev.jorel.commandapi.arguments.StringArgument;
 import dev.jorel.commandapi.executors.CommandArguments;
+import live.minehub.polarpaper.*;
+import live.minehub.polarpaper.util.CoordConversion;
 import me.nullicorn.nedit.NBTReader;
 import me.nullicorn.nedit.type.NBTCompound;
 import me.nullicorn.nedit.type.NBTList;
-import net.hollowcube.polar.AnvilPolar;
-import net.hollowcube.polar.PolarChunk;
-import net.hollowcube.polar.PolarSection;
-import net.hollowcube.polar.PolarWorld;
-import net.hollowcube.polar.PolarWriter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import org.bukkit.Bukkit;
+import net.minecraft.server.level.ServerLevel;
+import org.bukkit.*;
 import org.bukkit.command.CommandSender;
+import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -28,14 +29,13 @@ import org.bukkit.scheduler.BukkitScheduler;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.function.Predicate;
 
 import static com.github.hapily04.anvilmapeditor.AnvilMapEditor.PREFIX;
+import static com.github.hapily04.anvilmapeditor.commands.EditCommand.INPUT_DIRECTORY_NAME;
 import static com.github.hapily04.anvilmapeditor.commands.data.DataManager.NBT_DATA_KEY;
+import static live.minehub.polarpaper.Config.DEFAULT_GAMERULES;
 
 @CommandName("convertpolar")
 public class ConvertPolarCommand extends Command {
@@ -57,6 +57,23 @@ public class ConvertPolarCommand extends Command {
 			PREFIX + "<red>An error occurred while attempting to unload unused chunks.");*/
 	private static final Component CONVERTING = MINI_MESSAGE.deserialize(PREFIX + "<grey>Beginning conversion process...");
 	private static final Component CONVERTED = MINI_MESSAGE.deserialize(PREFIX + "<green>Successfully converted to Polar!");
+	private static final Config POLAR_CONFIG = new Config(
+		-1,
+		true,
+		6000L,
+		false,
+		true,
+		new Location(null, 0, 64, 0),
+		Difficulty.NORMAL,
+		false,
+		true,
+		true,
+		PolarWorld.DEFAULT_COMPRESSION,
+		PolarWorld.DEFAULT_COMPRESSION_LEVEL,
+		WorldType.FLAT,
+		World.Environment.NORMAL,
+		DEFAULT_GAMERULES
+	);
 
 	private final Plugin plugin;
 
@@ -68,7 +85,7 @@ public class ConvertPolarCommand extends Command {
 	@Override
 	protected void executes(CommandSender sender, CommandArguments args) {
 		Player player = (Player) sender;
-		String map = EditCommand.getMap(args);
+		String map = EditCommand.getMap((String) args.get("map"));
 		if (map == null) {
 			player.sendMessage(EditCommand.INVALID_MAP);
 			return;
@@ -78,7 +95,7 @@ public class ConvertPolarCommand extends Command {
 			player.sendMessage(EditCommand.INVALID_MAP);
 			return;
 		}
-		if (Bukkit.getWorld(EditCommand.INPUT_DIRECTORY_NAME + '/' + map) != null) {
+		if (Bukkit.getWorld(INPUT_DIRECTORY_NAME + '/' + map) != null) {
 			player.sendMessage(WORLD_MUST_BE_UNLOADED);
 			return;
 		}
@@ -88,17 +105,48 @@ public class ConvertPolarCommand extends Command {
 		} else {
 			player.sendMessage(UNUSED_CHUNKS_ERROR);
 		}*/
+		String fullMap = INPUT_DIRECTORY_NAME + '/' + map;
 		player.sendMessage(CONVERTING);
-		convertToPolar(worldFolder, player);
+		convertToPolar(worldFolder, fullMap, map, player);
 	}
 
-	private void convertToPolar(File worldFolder, Player player) {
+	private void convertToPolar(File worldFolder, String fullMap, String mapName, Player player) {
 		BukkitScheduler scheduler = Bukkit.getScheduler();
+		World world = WorldCreator.name(fullMap).createWorld();
+		if (world == null) {
+			player.sendMessage(EditCommand.INVALID_MAP);
+			return;
+		}
+		String polarFileName = mapName + ".polar";
+		Collection<PolarChunk> includedChunks = new ArrayList<>();
+		File regionFolder = new File(worldFolder, "region");
+		if (regionFolder.isDirectory()) {
+			File[] mcaFiles = regionFolder.listFiles((dir, name) -> name.endsWith(".mca"));
+			if (mcaFiles != null) {
+				for (File mcaFile : mcaFiles) {
+					String[] parts = mcaFile.getName().split("\\.");
+					int regionX = Integer.parseInt(parts[1]);
+					int regionZ = Integer.parseInt(parts[2]);
+                    try {
+                        MiniRegionFile miniRegionFile = new MiniRegionFile(mcaFile);
+						for (int localX = 0; localX < 32; localX++) {
+							for (int localZ = 0; localZ < 32; localZ++) {
+								int chunkX = regionX * 32 + localX;
+								int chunkZ = regionZ * 32 + localZ;
+								if (!miniRegionFile.hasChunkData(chunkX, chunkZ)) continue;
+								world.loadChunk(chunkX, chunkZ);
+								includedChunks.add(PolarChunk.convert(world, chunkX, chunkZ, PolarWorldAccess.NOOP, BlockSelector.ALL, true));
+							}
+						}
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+				}
+			}
+		}
 		scheduler.runTaskAsynchronously(plugin, () -> { // safe because it only schedules once saveWorldData is done
-			String worldName = worldFolder.getName();
-			String polarFileName = worldName + ".polar";
 			try {
-				PolarWorld polarWorld = AnvilPolar.anvilToPolar(worldFolder.toPath());
+				PolarWorld polarWorld = PolarWorld.convert(world, PolarWorldAccess.NOOP, BlockSelector.ALL, POLAR_CONFIG, includedChunks);
 				File dataFile = new File(worldFolder, DataManager.DATA_FILE_NAME);
 				NBTCompound dataCompound = NBTReader.readFile(dataFile);
 				NBTList dataList = dataCompound.getList(NBT_DATA_KEY);
@@ -118,7 +166,7 @@ public class ConvertPolarCommand extends Command {
 						}
 					}
 				}
-				File outputFolder = FileUtils.defendFile(new File(OUTPUT_DIRECTORY, worldName), true);
+				File outputFolder = FileUtils.defendFile(new File(OUTPUT_DIRECTORY, mapName), true);
 				File outputFile = FileUtils.defendFile(new File(outputFolder, polarFileName));
 				File outputDataFile = FileUtils.defendFile(new File(outputFolder, DataManager.DATA_FILE_NAME));
 				Files.copy(dataFile, outputDataFile);
@@ -129,8 +177,9 @@ public class ConvertPolarCommand extends Command {
 			} catch (IOException e) {
 				safeMessage(player, MINI_MESSAGE.deserialize(
 						PREFIX + "<red>An error occurred while trying to convert " + polarFileName));
-				throw new RuntimeException(e);
+				e.printStackTrace();
 			}
+			Bukkit.getScheduler().runTask(plugin, () -> Bukkit.unloadWorld(world, false));
 		});
 	}
 

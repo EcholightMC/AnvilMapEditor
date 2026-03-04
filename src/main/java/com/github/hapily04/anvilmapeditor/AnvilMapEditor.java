@@ -6,12 +6,11 @@ import com.github.hapily04.anvilmapeditor.listeners.ChatListener;
 import com.github.hapily04.anvilmapeditor.listeners.SpawnListener;
 import com.github.hapily04.anvilmapeditor.session.SessionManager;
 import dev.jorel.commandapi.CommandAPI;
-import dev.jorel.commandapi.CommandAPIBukkitConfig;
+import dev.jorel.commandapi.CommandAPIPaperConfig;
 import me.nullicorn.nedit.SNBTReader;
 import me.nullicorn.nedit.type.NBTCompound;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.SnbtPrinterTagVisitor;
-import net.minestom.server.MinecraftServer;
 import org.bukkit.World;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -31,8 +30,8 @@ public final class AnvilMapEditor extends JavaPlugin {
 
     @Override
     public void onLoad() {
-        MinecraftServer.init(); // required for polar conversion to work
-        CommandAPIBukkitConfig config = new CommandAPIBukkitConfig(this).initializeNBTAPI(NBTCompound.class, o -> {
+        System.out.println("ANVIL MAP EDITOR ON LOAD");
+        CommandAPIPaperConfig config = new CommandAPIPaperConfig(this).initializeNBTAPI(NBTCompound.class, o -> {
             CompoundTag compoundTag = (CompoundTag) o;
 			try {
 				return SNBTReader.readCompound(new SnbtPrinterTagVisitor().visit(compoundTag));

@@ -7,10 +7,12 @@ import dev.jorel.commandapi.arguments.StringArgument;
 import dev.jorel.commandapi.executors.CommandArguments;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import static com.github.hapily04.anvilmapeditor.AnvilMapEditor.PREFIX;
 
@@ -37,8 +39,9 @@ class DeleteSubcommand extends Command {
 		if (key == null) {
 			Entity targetEntity = player.getTargetEntity(20);
 			if (targetEntity != null) {
+				System.out.println(targetEntity + " " + targetEntity.getLocation());
 				if (targetEntity.hasMetadata("Key")) {
-					key = targetEntity.getMetadata("Key").get(0).asString();
+					key = targetEntity.getMetadata("Key").getFirst().asString();
 					targetEntity.remove();
 				}
 			}
@@ -52,6 +55,7 @@ class DeleteSubcommand extends Command {
 		dataManager.clearEntities(world);
 		dataManager.loadEntities(world);
 		player.sendMessage(DATA_DELETED);
+		MiniMessage.miniMessage().deserialize("<red>hello gang");
 	}
 
 	@Override

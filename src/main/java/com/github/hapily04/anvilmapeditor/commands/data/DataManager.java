@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 
 public class DataManager implements Listener {
@@ -98,33 +99,14 @@ public class DataManager implements Listener {
 	}
 
 	public void addData(World world, String key, NBTCompound data) {
-		NBTList dataList = getOrCreateDataList(world, NBT_DATA_KEY);
-		boolean replaced = false;
-		for	(Object o : dataList) {
-			NBTCompound nbtCompound = (NBTCompound) o;
-			if (nbtCompound.containsKey(key)) {
-				nbtCompound.put(key, data); // replace
-				replaced = true;
-			}
-		}
-		if (!replaced) {
-			NBTCompound keyedDataCompound = new NBTCompound();
-			keyedDataCompound.put(key, data);
-			dataList.add(keyedDataCompound);
-		}
+		NBTCompound dataCompound = getOrCreateDataCompound(world, NBT_DATA_KEY);
+		dataCompound.put(key, data);
 	}
 
 	public void deleteData(World world, String key) {
-		NBTList dataList = getOrCreateDataList(world, NBT_DATA_KEY);
-		NBTList copy = new NBTList(TagType.COMPOUND);
-		copy.addAll(dataList);
-		for (Object o : copy) {
-			NBTCompound nbtCompound = (NBTCompound) o;
-			if (nbtCompound.containsKey(key)) {
-				dataList.remove(nbtCompound);
-				return;
-			}
-		}
+		NBTCompound dataCompound = getOrCreateDataCompound(world, NBT_DATA_KEY);
+		if (!dataCompound.containsKey(key)) return;
+		dataCompound.remove(key);
 	}
 
 	public NBTCompound getData(World world) {
@@ -135,20 +117,16 @@ public class DataManager implements Listener {
 	public boolean hasData(World world, String key) {
 		if (!worldDataMap.containsKey(world)) return false;
 		if (key == null || key.isBlank()) return false;
-		NBTList dataList = getOrCreateDataList(world, NBT_DATA_KEY);
-		for (Object o : dataList) {
-			NBTCompound nbtCompound = (NBTCompound) o;
-			if (nbtCompound.containsKey(key)) {
-				return true;
-			}
-		}
-		return false;
+		NBTCompound dataCompound = getOrCreateDataCompound(world, NBT_DATA_KEY);
+		return dataCompound.containsKey(key);
 	}
 
 	public void clearEntities(World world) {
 		for (Entity entity : world.getEntities()) {
 			if (entity.getType() == EntityType.PLAYER) continue;
-			if (entity.hasMetadata(METADATA_KEY)) entity.remove();
+			entity.remove();
+			// kill all entities there shouldn't be any other ones?
+			//if (entity.hasMetadata(METADATA_KEY)) entity.remove();
 		}
 	}
 
@@ -176,6 +154,7 @@ public class DataManager implements Listener {
 				interaction.setInteractionWidth(size);
 				interaction.setInteractionHeight(size);
 				interaction.setMetadata(METADATA_KEY, new FixedMetadataValue(plugin, true));
+				System.out.println("setting interaction key for " + key + " and entity at " + interaction.getLocation());
 				interaction.setMetadata("Key", new FixedMetadataValue(plugin, key));
 			}
 		}
@@ -221,13 +200,18 @@ public class DataManager implements Listener {
 
 	NBTList getOrCreateDataList(World world, String key) {
 		NBTCompound baseCompound = worldDataMap.get(world).getData();
-		return (NBTList) getOrPutIfAbsent(baseCompound, key, unused -> new NBTList(TagType.COMPOUND));
+		return (NBTList) getOrPutIfAbsent(baseCompound, key, () -> new NBTList(TagType.COMPOUND));
+	}
+
+	NBTCompound getOrCreateDataCompound(World world, String key) {
+		NBTCompound baseCompound = worldDataMap.get(world).getData();
+		return (NBTCompound) getOrPutIfAbsent(baseCompound, key, NBTCompound::new);
 	}
 
 	@SuppressWarnings("SameParameterValue")
-	private Object getOrPutIfAbsent(NBTCompound compound, String key, Function<Void, Object> function) {
+	private Object getOrPutIfAbsent(NBTCompound compound, String key, Supplier<Object> function) {
 		if (compound.containsKey(key)) return compound.get(key);
-		Object o = function.apply(null);
+		Object o = function.get();
 		compound.put(key, o);
 		return o;
 	}
