@@ -1,26 +1,21 @@
 package com.github.hapily04.anvilmapeditor.commands;
 
-import ca.spottedleaf.moonrise.common.util.CoordinateUtils;
 import com.github.hapily04.anvilmapeditor.AnvilMapEditor;
 import com.github.hapily04.anvilmapeditor.commands.data.DataManager;
 import com.github.hapily04.anvilmapeditor.util.FileUtils;
-import com.github.hapily04.anvilmapeditor.util.MiniRegionFile;
 import com.google.common.io.Files;
 import dev.jorel.commandapi.arguments.Argument;
 import dev.jorel.commandapi.arguments.ArgumentSuggestions;
 import dev.jorel.commandapi.arguments.StringArgument;
 import dev.jorel.commandapi.executors.CommandArguments;
-import live.minehub.polarpaper.*;
-import live.minehub.polarpaper.util.CoordConversion;
 import me.nullicorn.nedit.NBTReader;
 import me.nullicorn.nedit.type.NBTCompound;
 import me.nullicorn.nedit.type.NBTList;
+import net.hollowcube.polar.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.minecraft.server.level.ServerLevel;
 import org.bukkit.*;
 import org.bukkit.command.CommandSender;
-import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -35,7 +30,6 @@ import java.util.function.Predicate;
 import static com.github.hapily04.anvilmapeditor.AnvilMapEditor.PREFIX;
 import static com.github.hapily04.anvilmapeditor.commands.EditCommand.INPUT_DIRECTORY_NAME;
 import static com.github.hapily04.anvilmapeditor.commands.data.DataManager.NBT_DATA_KEY;
-import static live.minehub.polarpaper.Config.DEFAULT_GAMERULES;
 
 @CommandName("convertpolar")
 public class ConvertPolarCommand extends Command {
@@ -57,23 +51,6 @@ public class ConvertPolarCommand extends Command {
 			PREFIX + "<red>An error occurred while attempting to unload unused chunks.");*/
 	private static final Component CONVERTING = MINI_MESSAGE.deserialize(PREFIX + "<grey>Beginning conversion process...");
 	private static final Component CONVERTED = MINI_MESSAGE.deserialize(PREFIX + "<green>Successfully converted to Polar!");
-	private static final Config POLAR_CONFIG = new Config(
-		-1,
-		true,
-		6000L,
-		false,
-		true,
-		new Location(null, 0, 64, 0),
-		Difficulty.NORMAL,
-		false,
-		true,
-		true,
-		PolarWorld.DEFAULT_COMPRESSION,
-		PolarWorld.DEFAULT_COMPRESSION_LEVEL,
-		WorldType.FLAT,
-		World.Environment.NORMAL,
-		DEFAULT_GAMERULES
-	);
 
 	private final Plugin plugin;
 
@@ -118,7 +95,7 @@ public class ConvertPolarCommand extends Command {
 			return;
 		}
 		String polarFileName = mapName + ".polar";
-		Collection<PolarChunk> includedChunks = new ArrayList<>();
+		/*Collection<PolarChunk> includedChunks = new ArrayList<>();
 		File regionFolder = new File(worldFolder, "region");
 		if (regionFolder.isDirectory()) {
 			File[] mcaFiles = regionFolder.listFiles((dir, name) -> name.endsWith(".mca"));
@@ -143,15 +120,15 @@ public class ConvertPolarCommand extends Command {
                     }
 				}
 			}
-		}
+		}*/
 		scheduler.runTaskAsynchronously(plugin, () -> { // safe because it only schedules once saveWorldData is done
 			try {
-				PolarWorld polarWorld = PolarWorld.convert(world, PolarWorldAccess.NOOP, BlockSelector.ALL, POLAR_CONFIG, includedChunks);
+				PolarWorld polarWorld = AnvilPolar.anvilToPolar(worldFolder.toPath());
 				File dataFile = new File(worldFolder, DataManager.DATA_FILE_NAME);
 				NBTCompound dataCompound = NBTReader.readFile(dataFile);
 				NBTList dataList = dataCompound.getList(NBT_DATA_KEY);
 				Collection<PolarChunk> chunks = polarWorld.chunks();
-				cleanPolarChunks(chunks, 1);
+				cleanPolarChunks(chunks, 2);
 				if (dataList != null) {
 					for (Object o : dataList) {
 						NBTCompound compound = (NBTCompound) o;
@@ -188,7 +165,7 @@ public class ConvertPolarCommand extends Command {
 	 *
 	 * @param chunks the chunks to query
 	 * @param bufferChunks the radius value for how many chunks should be loaded around the occupied chunks.
-	 *                        <b>A minimum value of 1 is recommended to prevent visual artifacts</b>
+	 *
 	 */
 	public static void cleanPolarChunks(Collection<PolarChunk> chunks, int bufferChunks) {
 		List<PolarChunk> validChunks = new ArrayList<>(); // chunks that aren't blank
@@ -231,7 +208,7 @@ public class ConvertPolarCommand extends Command {
 
 	@Override
 	protected Argument<?>[] arguments() {
-		ArgumentSuggestions<CommandSender> mapSuggestions = ArgumentSuggestions.strings(info -> EditCommand.getMapInputs(true));
+		ArgumentSuggestions<CommandSender> mapSuggestions = ArgumentSuggestions.strings(_ -> EditCommand.getMapInputs(true));
 		Argument<String> map = new StringArgument("map").includeSuggestions(mapSuggestions).instance();
 		return new Argument[]{map};
 	}

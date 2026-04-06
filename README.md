@@ -40,4 +40,4 @@ To exit your current edit session, right click the structure void.
 
 <details><summary>Why are there Minestom packages and classes?</summary>
 Polar requires them to work, and I don't want to import all of Minestom.
-</detauls>
+</details>

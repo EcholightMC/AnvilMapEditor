@@ -1,7 +1,5 @@
 package com.github.hapily04.anvilmapeditor.util;
 
-import live.minehub.polarpaper.util.CoordConversion;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;

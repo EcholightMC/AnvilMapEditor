@@ -1,12 +1,12 @@
 plugins {
     id "com.gradleup.shadow" version "9.3.0"
     id 'java'
-    id 'org.jetbrains.kotlin.jvm' version '2.0.0-RC1'
-    id "io.papermc.paperweight.userdev" version "2.0.0-beta.19"
+    id 'org.jetbrains.kotlin.jvm' version '2.1.10'
+    id "io.papermc.paperweight.userdev" version "2.0.0-beta.21"
 }
 
 group = 'com.github.hapily04'
-version = '2.4'
+version = '2.5'
 
 repositories {
     mavenCentral()
@@ -26,27 +26,25 @@ repositories {
 }
 
 dependencies {
+    pluginRemapper("net.fabricmc:tiny-remapper:0.13.1:fat")
     paperweight.paperDevBundle("1.21.11-R0.1-SNAPSHOT")
     //compileOnly "io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT"
-    implementation 'dev.jorel:commandapi-paper-shade:11.1.0'
-    compileOnly "live.minehub:polarpaper:1.21.11.14"
+    implementation 'dev.jorel:commandapi-paper-shade:11.2.0'
+    implementation 'net.minestom:minestom:2026.03.25-1.21.11'
+    implementation 'dev.hollowcube:polar:1.15.1'
     implementation 'me.nullicorn:Nedit:2.2.0'
 }
 
 def targetJavaVersion = 21
+def minestomJavaVersion = 25
 java {
     def javaVersion = JavaVersion.toVersion(targetJavaVersion)
     sourceCompatibility = javaVersion
     targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    }
+    toolchain.languageVersion = JavaLanguageVersion.of(minestomJavaVersion)
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release.set(targetJavaVersion)
-    }
+    options.release.set(minestomJavaVersion)
 }

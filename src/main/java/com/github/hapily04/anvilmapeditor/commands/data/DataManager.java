@@ -154,7 +154,6 @@ public class DataManager implements Listener {
 				interaction.setInteractionWidth(size);
 				interaction.setInteractionHeight(size);
 				interaction.setMetadata(METADATA_KEY, new FixedMetadataValue(plugin, true));
-				System.out.println("setting interaction key for " + key + " and entity at " + interaction.getLocation());
 				interaction.setMetadata("Key", new FixedMetadataValue(plugin, key));
 			}
 		}

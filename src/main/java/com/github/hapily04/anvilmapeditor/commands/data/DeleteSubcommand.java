@@ -39,7 +39,6 @@ class DeleteSubcommand extends Command {
 		if (key == null) {
 			Entity targetEntity = player.getTargetEntity(20);
 			if (targetEntity != null) {
-				System.out.println(targetEntity + " " + targetEntity.getLocation());
 				if (targetEntity.hasMetadata("Key")) {
 					key = targetEntity.getMetadata("Key").getFirst().asString();
 					targetEntity.remove();

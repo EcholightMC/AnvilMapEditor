@@ -11,6 +11,7 @@ import me.nullicorn.nedit.SNBTReader;
 import me.nullicorn.nedit.type.NBTCompound;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.SnbtPrinterTagVisitor;
+import net.minestom.server.MinecraftServer;
 import org.bukkit.World;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -30,7 +31,7 @@ public final class AnvilMapEditor extends JavaPlugin {
 
     @Override
     public void onLoad() {
-        System.out.println("ANVIL MAP EDITOR ON LOAD");
+        MinecraftServer.init();
         CommandAPIPaperConfig config = new CommandAPIPaperConfig(this).initializeNBTAPI(NBTCompound.class, o -> {
             CompoundTag compoundTag = (CompoundTag) o;
 			try {

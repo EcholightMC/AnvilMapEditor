@@ -17,6 +17,9 @@ import org.bukkit.plugin.PluginManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.function.Predicate;
 
@@ -92,7 +95,7 @@ public class EditCommand extends Command {
 
 	@Override
 	protected Argument<?>[] arguments() {
-		ArgumentSuggestions<CommandSender> mapSuggestions = ArgumentSuggestions.strings(info -> getMapInputs(true));
+		ArgumentSuggestions<CommandSender> mapSuggestions = ArgumentSuggestions.strings(_ -> getMapInputs(true));
 		Argument<String> map = new StringArgument("map").includeSuggestions(mapSuggestions).instance();
 		return new Argument[]{map};
 	}
@@ -110,26 +113,23 @@ public class EditCommand extends Command {
 	public static @Nullable String getMap(String map) {
 		if (map == null) return null;
 		for (String mapInput : getMapInputs(false)) {
-			if (mapInput.equalsIgnoreCase(map)) return mapInput;
+			if (map.equalsIgnoreCase(mapInput)) return mapInput;
 		}
 		return null;
 	}
 
 	public static String[] getMapInputs(boolean suggestions) {
-        PluginManager pm = Bukkit.getPluginManager();
 		File[] files = INPUT_DIRECTORY.listFiles();
 		if (files == null) return new String[]{};
-		String[] mapNames = new String[files.length];
-		for (int i = 0; i < files.length; i++) {
-			File file = files[i];
-			if (!file.isDirectory()) continue;
-			if (suggestions) {
-				mapNames[i] = file.getName().toLowerCase(Locale.ENGLISH);
-			} else {
-				mapNames[i] = file.getName();
-			}
-		}
-		return mapNames;
+		List<String> mapNames = new ArrayList<>();
+        for (File file : files) {
+            if (!file.isDirectory()) continue;
+            if (!file.exists()) continue;
+            String fileName = file.getName();
+            if (suggestions) fileName = fileName.toLowerCase(Locale.ENGLISH);
+            mapNames.add(fileName);
+        }
+		return mapNames.toArray(new String[0]);
 	}
 
 }
